@@ -2,59 +2,54 @@
 	<div class="address-label" v-click-outside="() => editing = false" @click="editStatusChange(true)">
 		<div class="label-box" :class="{'disabled': disabled}" v-show="!editing" title="点击修改">{{val || placeholder}}<i class=""></i></div>
 		<div class="edit-box" v-show="editing && !disabled">
-			<el-input ref='labelInputRef' v-model="val" :placeholder="placeholder" :autofocus="true">
-			</el-input>
-			<el-button type="text" title="取消"></el-button>
+			<input ref='labelInputRef' v-model.lazy="val" @keyup.enter="onSubmit" autofocus>
+			</input>
 		</div>
 	</div>
 </template>
 
 <script>
 export default {
-  name: 'AddressLabel',
-  props: {
-    value: {
-      type: String,
-      default: '默认label'
-    },
-    placeholder: {
-      type: String,
-      default: '——'
-    },
-    disabled: {
-      type: Boolean,
-      default: false
-    }
-  },
-  data () {
-    return {
-      editing: false,
-      val: ''
-    }
-  },
-  mounted () {
-    this.val = this.value
-  },
-  watch: {
-    value: (newVal, oldVal) => {
-      this.val = newVal
-    },
-    val: (newVal, oldVal) => {
-      this.$emit && this.$emit('update:value', newVal)
-    }
-  },
-  methods: {
-    editStatusChange (status) {
-      if (this.disabled) return
-      this.editing = status
-      if (status) {
-        setTimeout(() => {
-          this.$refs.labelInputRef.focus()
-        }, 300)
-      }
-    }
-  }
-}
+	name: 'AddressLabel',
+	props: {
+		value: {
+			type: String,
+			default: '默认label'
+		},
+		placeholder: {
+			type: String,
+			default: '——'
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		}
+	},
+	data () {
+		return {
+			editing: false,
+			val: ''
+		};
+	},
+	mounted () {
+		this.val = this.value;
+	},
+	methods: {
+		editStatusChange (status) {
+			if (this.disabled) return;
+			this.editing = status;
+			if (status) {
+				setTimeout(() => {
+					this.$refs.labelInputRef.focus();
+				}, 300);
+			}
+		},
+		onSubmit () {
+			this.editStatusChange(false);
+			this.$emit('addressSearch', this.val);
+		}
+	}
+};
 </script>
 
 <style lang="scss" scoped>
@@ -73,7 +68,7 @@ export default {
 		justify-content: flex-end;
 		color: #f0f4fd;
 		padding-right: 15px;
-		font-size: 14px;
+		font-size: 12px;
 		cursor: text;
 
 		&.disabled {
@@ -86,20 +81,18 @@ export default {
 		align-items: center;
 		justify-content: flex-end;
 
-		/deep/ .el-input__inner {
-			background: unset;
-			letter-spacing: unset;
-			padding: 0;
-			color: #f0f4fd;
-			display: flex;
-			align-items: center;
-			height: 100%;
-			border-radius: unset;
+		input {
+			border: unset;
+			background: transparent;
+			font-size: 12px;
+			color: white;
+			letter-spacing: inherit;
+			font-family: inherit;
+			&:focus {
+				outline: unset;
+			}
 		}
 
-		/deep/ .el-input {
-			animation: twinkle 1.2s infinite ease-in;
-		}
 	}
 }
 </style>

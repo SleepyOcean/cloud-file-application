@@ -6,8 +6,8 @@
 
 <script>
   export default {
-    name: 'file-system'
-  }
+  	name: 'file-system'
+  };
 </script>
 
 <style>

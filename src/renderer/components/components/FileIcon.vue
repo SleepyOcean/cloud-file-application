@@ -6,14 +6,14 @@
 
 <script>
 export default {
-  name: 'FileIcon',
-  props: {
-    name: {
-      type: String,
-      default: 'icon-file'
-    }
-  }
-}
+	name: 'FileIcon',
+	props: {
+		name: {
+			type: String,
+			default: 'icon-file'
+		}
+	}
+};
 </script>
 
 <style scoped>
