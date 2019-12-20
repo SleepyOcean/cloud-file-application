@@ -93,7 +93,7 @@
 	import '../assets/icon/online/filefont.js';
 	import '../assets/icon/ios/iconfont.css';
 	import WebUploader from 'webuploader';
-	const fs = require('fs');
+	// const fs = require('fs');
 	const ipc = require('electron').ipcRenderer;
 	export default {
 		name: 'FileSystem',
@@ -224,43 +224,46 @@
 			this.resize();
 			let self = this;
 			const uploader = WebUploader.create({
-				auto: true, // 选完文件后，是否自动上传。
-				server: 'http://localhost:9999/resource/file/upload', // 文件接收服务端。
-				pick: '#filePickerId' // 内部根据当前运行是创建，可能是input元素，也可能是flash. 这里是div的id
+				auto: true,
+				chunked: true,
+				pick: '#filePickerId',
+				dnd: '#ffbId',
+				method: 'POST',
+				server: 'http://localhost:9999/resource/file/upload'
 			});
 
 			uploader.on('fileQueued', function(file) {
 				// 选中文件时要做的事情，比如在页面中显示选中的文件并添加到文件列表，获取文件的大小，文件类型等
-				console.log(file.ext); // 获取文件的后缀
-				console.log(file.size); // 获取文件的大小
-				console.log(file.name);
+				console.log('文件的后缀' + file.ext); // 获取文件的后缀
+				console.log('文件的大小' + file.size); // 获取文件的大小
+				console.log('文件的名称' + file.name);
 			});
 
 			uploader.on('uploadProgress', function(file, percentage) {
-				console.log(percentage * 100 + '%');
+				console.log('传输进度：' + percentage * 100 + '%');
 			});
 
 			uploader.on('uploadSuccess', function(file, response) {
-				console.log(file.id + '传输成功');
+				console.log('传输成功' + file.id);
 			});
 
 			uploader.on('uploadError', function(file) {
-				console.log(file);
-				console.log(file.id + 'upload error');
+				console.log('传输内容：' + file);
+				console.log('upload error' + file.id);
 			});
 
-			this.$refs['ffbRef'].addEventListener('drop', (e) => {
-				e.preventDefault();
-				const files = e.dataTransfer.files;
-				if (files) {
-					console.log('path', files[0].path);
-					const content = fs.readFileSync(files[0].path);
-					console.log('content', content.toString());
-				}
-			});
-			this.$refs['ffbRef'].addEventListener('dragover', (e) => {
-				e.preventDefault();
-			});
+			// this.$refs['ffbRef'].addEventListener('drop', (e) => {
+			// 	e.preventDefault();
+			// 	const files = e.dataTransfer.files;
+			// 	if (files) {
+			// 		console.log('path', files[0].path);
+			// 		const content = fs.readFileSync(files[0].path);
+			// 		console.log('content', content.toString());
+			// 	}
+			// });
+			// this.$refs['ffbRef'].addEventListener('dragover', (e) => {
+			// 	e.preventDefault();
+			// });
 			window.onresize = () => {
 				return (() => {
 					self.resize();
