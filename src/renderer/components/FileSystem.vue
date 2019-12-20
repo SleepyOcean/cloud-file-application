@@ -6,28 +6,28 @@
 				<div class="fs-title v-center-box" style="-webkit-app-region: drag">{{ title }}</div>
 				<div class="fs-frame-options v-center-box">
 					<i
-						class="fs-frame-options-item line-icon icon-minus center-box"
+						class="fs-frame-options-item iosfont icon-ios-remove minus center-box"
 						@click="minusWindow"
 					/>
 					<i
-						class="fs-frame-options-item line-icon icon-stop center-box"
+						class="fs-frame-options-item iosfont icon-ios-qr-scanner max center-box"
 						@click="maxWindow"
 					/>
 					<i
-						class="fs-frame-options-item line-icon icon-close center-box"
+						class="fs-frame-options-item iosfont icon-ios-close close center-box"
 						@click="closeWindow"
 					/>
 				</div>
 			</div>
 			<div class="fs-nav-bar v-center-box">
 				<div class="fs-nav-option">
-					<i class="line-icon icon-b-1" title="后退"/>
+					<i class="iosfont icon-ios-arrow-back" title="后退"/>
 				</div>
 				<div class="fs-nav-option">
-					<i class="line-icon icon-b-2" title="前进"/>
+					<i class="iosfont icon-ios-arrow-forward" title="前进"/>
 				</div>
 				<div class="fs-nav-option">
-					<i class="line-icon icon-b-155" title="上移"/>
+					<i class="iosfont icon-ios-arrow-up" title="上移"/>
 				</div>
 				<div class="fs-nav-address-box">
 					<div class="fs-nav-address-bar" :class="{'editing': getAddressEditStatus()}">
@@ -56,6 +56,12 @@
 						</div>
 					</div>
 				</div>
+				<div class="fs-nav-option fs-nav-tools-box">
+					<i class="iosfont icon-ios-cog" title="设置"/>
+				</div>
+				<div class="fs-nav-option fs-nav-tools-box" id="filePickerId">
+					<i class="iosfont icon-ios-cloud-upload" title="上传文件"/>
+				</div>
 			</div>
 		</div>
 		<div class="fs-content-box">
@@ -70,7 +76,7 @@
 					<span class="fs-shortcut-item-name ">{{ item.name }}</span>
 				</div>
 			</div>
-			<div class="fs-file-box" ref="ffbRef">
+			<div class="fs-file-box" ref="ffbRef" id="ffbId">
 				<file-shortcut @click.native="current.fileSelected = index"
 							   :class="current.fileSelected === index ? 'active':''"
 							   :style="'margin: 0 ' + cssConfig.fsiMargin" :key="index" :file="item"
@@ -85,9 +91,9 @@
 	import FileIcon from './components/FileIcon';
 	import FileShortcut from './components/FileShortcut';
 	import '../assets/icon/online/filefont.js';
-	import '../assets/icon/online/linefont.css';
 	import '../assets/icon/ios/iconfont.css';
-
+	import WebUploader from 'webuploader';
+	const fs = require('fs');
 	const ipc = require('electron').ipcRenderer;
 	export default {
 		name: 'FileSystem',
@@ -217,6 +223,44 @@
 		mounted() {
 			this.resize();
 			let self = this;
+			const uploader = WebUploader.create({
+				auto: true, // 选完文件后，是否自动上传。
+				server: 'http://localhost:9999/resource/file/upload', // 文件接收服务端。
+				pick: '#filePickerId' // 内部根据当前运行是创建，可能是input元素，也可能是flash. 这里是div的id
+			});
+
+			uploader.on('fileQueued', function(file) {
+				// 选中文件时要做的事情，比如在页面中显示选中的文件并添加到文件列表，获取文件的大小，文件类型等
+				console.log(file.ext); // 获取文件的后缀
+				console.log(file.size); // 获取文件的大小
+				console.log(file.name);
+			});
+
+			uploader.on('uploadProgress', function(file, percentage) {
+				console.log(percentage * 100 + '%');
+			});
+
+			uploader.on('uploadSuccess', function(file, response) {
+				console.log(file.id + '传输成功');
+			});
+
+			uploader.on('uploadError', function(file) {
+				console.log(file);
+				console.log(file.id + 'upload error');
+			});
+
+			this.$refs['ffbRef'].addEventListener('drop', (e) => {
+				e.preventDefault();
+				const files = e.dataTransfer.files;
+				if (files) {
+					console.log('path', files[0].path);
+					const content = fs.readFileSync(files[0].path);
+					console.log('content', content.toString());
+				}
+			});
+			this.$refs['ffbRef'].addEventListener('dragover', (e) => {
+				e.preventDefault();
+			});
 			window.onresize = () => {
 				return (() => {
 					self.resize();
@@ -327,17 +371,17 @@
 						margin: 0 5px;
 						transition: all 0.1s ease-in-out;
 
-						&.icon-close {
+						&.close {
 							color: #ff5f56;
 							background: #ff5f56;
 						}
 
-						&.icon-minus {
+						&.minus {
 							color: #24ca3f;
 							background: #24ca3f;
 						}
 
-						&.icon-stop {
+						&.max {
 							color: #ffbe2a;
 							background: #ffbe2a;
 						}
@@ -385,10 +429,10 @@
 				.fs-nav-address-box {
 					float: left;
 					height: 100%;
-					width: calc(100% - 180px - 80px);
+					width: calc(100% - 46px * 5);
 					display: flex;
 					align-items: center;
-					padding-left: 20px;
+					padding-left: 10px;
 
 					.fs-nav-address-bar {
 						height: 32px;
@@ -402,6 +446,7 @@
 							background: transparent;
 							animation: twinkle 1.2s infinite ease-in;
 							border: 2px solid #9599c5;
+							box-sizing: content-box;
 						}
 						@keyframes twinkle {
 							from {
@@ -456,6 +501,35 @@
 								padding-right: 5px;
 								font-size: 12px;
 							}
+						}
+					}
+				}
+				#filePickerId {
+					input {
+						opacity: 0;
+						height: 100%;
+						width: 100%;
+					}
+					label {
+						display: none !important;
+					}
+				}
+				.fs-nav-tools-box {
+					i {
+						font-size: 22px;
+						font-weight: lighter;
+						color: white;
+
+					}
+					&:hover {
+						i {
+							color: #cad0ec;
+						}
+					 }
+					&:active,
+					&:focus {
+						i {
+							background: #2f3649;
 						}
 					}
 				}
