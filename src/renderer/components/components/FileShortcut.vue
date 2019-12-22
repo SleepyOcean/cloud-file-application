@@ -33,23 +33,46 @@ export default {
 		getIcon (type) {
 			switch (type) {
 			case 'music':
+			case '.mp3':
+			case '.wmv':
+			case '.flac':
 				return 'icon-file_music';
 			case 'doc':
+			case '.doc':
+			case '.docx':
 				return 'icon-file_word';
 			case 'img':
+			case '.png':
+			case '.jpg':
+			case '.jpeg':
 				return 'icon-file_img';
 			case 'video':
+			case '.mp4':
+			case '.mkv':
+			case '.rmvb':
 				return 'icon-file_video';
+			case '.xml':
+				return 'icon-file_code';
 			case 'dir':
 				return 'icon-folder';
 			case '.html':
 				return 'icon-file_html';
 			case '.json':
+			case '.txt':
+			case '.logs':
 				return 'icon-file_txt';
-			case '.mp4':
-				return 'icon-file_video';
-			case '.png':
-				return 'icon-file_img';
+			case '.exe':
+				return 'icon-file_exe';
+			case '.bt':
+				return 'icon-file_bt';
+			case '.zip':
+			case '.rar':
+			case '.tar':
+			case '.gz':
+			case '.7z':
+				return 'icon-file_zip';
+			default:
+				return 'icon-file';
 			}
 		}
 	}

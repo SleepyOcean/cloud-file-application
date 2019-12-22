@@ -20,13 +20,13 @@
 				</div>
 			</div>
 			<div class="fs-nav-bar v-center-box">
-				<div class="fs-nav-option">
+				<div class="fs-nav-option" @click="back">
 					<i class="iosfont icon-ios-arrow-back" title="后退"/>
 				</div>
-				<div class="fs-nav-option">
+				<div class="fs-nav-option" @click="forward">
 					<i class="iosfont icon-ios-arrow-forward" title="前进"/>
 				</div>
-				<div class="fs-nav-option">
+				<div class="fs-nav-option" @click="up">
 					<i class="iosfont icon-ios-arrow-up" title="上移"/>
 				</div>
 				<div class="fs-nav-address-box">
@@ -39,7 +39,8 @@
 						</div>
 						<div class="fs-nav-address">
 							<i class="iosfont icon-ios-play"/>
-							<address-label ref="addressLabelRef" v-model="current.path" @addressSearch="addressConfirm"/>
+							<address-label ref="addressLabelRef" v-model="current.path"
+										   @addressSearch="addressConfirm"/>
 						</div>
 						<div class="fs-nav-address-option">
 							<i
@@ -78,9 +79,10 @@
 			</div>
 			<div class="fs-file-box" ref="ffbRef" id="ffbId">
 				<file-shortcut @click.native="current.fileSelected = index"
+							   @dblclick.native="dirExplore(item)"
 							   :class="current.fileSelected === index ? 'active':''"
 							   :style="'margin: 0 ' + cssConfig.fsiMargin" :key="index" :file="item"
-							   v-for="(item, index) in home.dirs[0].sub.concat(home.dirs[0].sub).concat(home.dirs[0].sub).concat(home.dirs[0].sub).concat(home.dirs[0].sub).concat(home.dirs[0].sub).concat(home.dirs[0].sub).concat(home.dirs[0].sub).concat(home.dirs[0].sub).concat(home.dirs[0].sub).concat(home.dirs[0].sub).concat(home.dirs[0].sub[0].sub).concat(home.dirs[0].sub[1].sub)"/>
+							   v-for="(item, index) in current.dirs"/>
 			</div>
 		</div>
 	</div>
@@ -90,10 +92,11 @@
 	import AddressLabel from './components/AddressLabel';
 	import FileIcon from './components/FileIcon';
 	import FileShortcut from './components/FileShortcut';
+	import {getDir} from '../service/fileService';
 	import '../assets/icon/online/filefont.js';
 	import '../assets/icon/ios/iconfont.css';
 	import WebUploader from 'webuploader';
-	// const fs = require('fs');
+
 	const ipc = require('electron').ipcRenderer;
 	export default {
 		name: 'FileSystem',
@@ -109,9 +112,14 @@
 				},
 				title: '云文件管理系统',
 				current: {
-					path: '沉洋云盘',
+					path: '',
+					dirs: [],
 					shortcutSelected: -1,
 					fileSelected: -1
+				},
+				pathStore: {
+					current: '',
+					last: ''
 				},
 				shortcuts: [
 					{
@@ -138,132 +146,14 @@
 						type: 'video',
 						unfold: false
 					}
-				],
-				home: {
-					name: '沉洋云盘',
-					path: '',
-					dirs: [
-						{
-							name: 'code',
-							path: '',
-							type: 'dir',
-							unfold: false,
-							sub: [{
-								name: 'blog-front',
-								path: '',
-								type: 'dir',
-								unfold: false,
-								sub: [{
-									name: 'package.json',
-									path: '',
-									type: '.json',
-									unfold: false
-								}, {
-									name: 'index.html',
-									path: '',
-									type: '.html',
-									unfold: false
-								}]
-							}, {
-								name: 'blog-server',
-								path: '',
-								type: 'dir',
-								unfold: false,
-								sub: [{
-									name: 'readme.png',
-									path: '',
-									type: '.png',
-									unfold: false
-								}, {
-									name: 'aboutMe.mp4',
-									path: '',
-									type: '.mp4',
-									unfold: false
-								}]
-							}, {
-								name: '测试文件夹',
-								path: '',
-								type: 'dir',
-								unfold: false,
-								sub: [{
-									name: 'readme.png',
-									path: '',
-									type: '.png',
-									unfold: false
-								}, {
-									name: 'aboutMe.mp4',
-									path: '',
-									type: '.mp4',
-									unfold: false
-								}]
-							}]
-						},
-						{
-							name: 'music',
-							path: '',
-							type: 'dir',
-							unfold: false
-						},
-						{
-							name: 'photo',
-							path: '',
-							type: 'dir',
-							unfold: false
-						},
-						{
-							name: 'cinema',
-							path: '',
-							type: 'dir',
-							unfold: false
-						}
-					]
-				}
+				]
 			};
 		},
 		mounted() {
-			this.resize();
 			let self = this;
-			const uploader = WebUploader.create({
-				auto: true,
-				chunked: true,
-				pick: '#filePickerId',
-				dnd: '#ffbId',
-				method: 'POST',
-				server: 'http://localhost:9999/resource/file/upload'
-			});
-
-			uploader.on('fileQueued', function(file) {
-				// 选中文件时要做的事情，比如在页面中显示选中的文件并添加到文件列表，获取文件的大小，文件类型等
-				console.log('文件的后缀' + file.ext); // 获取文件的后缀
-				console.log('文件的大小' + file.size); // 获取文件的大小
-				console.log('文件的名称' + file.name);
-			});
-
-			uploader.on('uploadProgress', function(file, percentage) {
-				console.log('传输进度：' + percentage * 100 + '%');
-			});
-
-			uploader.on('uploadSuccess', function(file, response) {
-				console.log('传输成功' + file.id);
-			});
-
-			uploader.on('uploadError', function(file) {
-				console.log('传输内容：' + file);
-				console.log('upload error' + file.id);
-			});
-
-			// this.$refs['ffbRef'].addEventListener('drop', (e) => {
-			// 	e.preventDefault();
-			// 	const files = e.dataTransfer.files;
-			// 	if (files) {
-			// 		console.log('path', files[0].path);
-			// 		const content = fs.readFileSync(files[0].path);
-			// 		console.log('content', content.toString());
-			// 	}
-			// });
-			// this.$refs['ffbRef'].addEventListener('dragover', (e) => {
-			// 	e.preventDefault();
-			// });
+			self.resize();
+			self.initUploader();
+			self.getDir();
 			window.onresize = () => {
 				return (() => {
 					self.resize();
@@ -271,6 +161,64 @@
 			};
 		},
 		methods: {
+			initUploader() {
+				const uploader = WebUploader.create({
+					auto: true,
+					chunked: true,
+					pick: '#filePickerId',
+					dnd: '#ffbId',
+					method: 'POST',
+					server: 'http://localhost:9999/resource/file/upload'
+				});
+				uploader.on('fileQueued', function (file) {
+					// 选中文件时要做的事情，比如在页面中显示选中的文件并添加到文件列表，获取文件的大小，文件类型等
+					console.log('文件的后缀' + file.ext); // 获取文件的后缀
+					console.log('文件的大小' + file.size); // 获取文件的大小
+					console.log('文件的名称' + file.name);
+				});
+				uploader.on('uploadProgress', function (file, percentage) {
+					console.log('传输进度：' + percentage * 100 + '%');
+				});
+				uploader.on('uploadSuccess', function (file, response) {
+					console.log('传输成功' + file.id);
+				});
+				uploader.on('uploadError', function (file) {
+					console.log('传输内容：' + file);
+					console.log('upload error' + file.id);
+				});
+			},
+			getDir() {
+				getDir({dir: this.current.path}).then(data => {
+					this.current.dirs = data.dir;
+				});
+			},
+			dirExplore(item) {
+				if (item.type === 'dir') {
+					if(this.current.path.indexOf('/') > -1 || this.current.path !== ''){
+						this.current.path += `/${item.name}`;
+					} else {
+						this.current.path += `${item.name}`;
+					}
+					this.getDir();
+				}
+			},
+			back() {
+				if (this.current.path.indexOf('/') > -1) {
+					this.pathStore.last = this.current.path;
+					this.current.path = this.current.path.substring(0, this.current.path.lastIndexOf('/'));
+					this.getDir();
+				} else if (this.current.path !== '') {
+					this.current.path = '';
+					this.getDir();
+				}
+			},
+			forward() {
+				this.current.path = this.pathStore.last;
+				this.getDir();
+			},
+			up() {
+				this.back();
+			},
 			minusWindow() {
 				ipc.send('window-min');
 			},
@@ -287,12 +235,14 @@
 					this.cssConfig.fsiMargin = margin + 'px';
 				}
 			},
-			refresh(){
+			refresh() {
 				if (this.$refs && this.$refs['addressLabelRef']) {
-					console.log(this.$refs['addressLabelRef'].val);
+					this.getDir();
 				}
 			},
-			addressConfirm (address) {
+			addressConfirm(address) {
+				this.current.path = address;
+				this.getDir();
 				console.log(address);
 			},
 			getIcon(type) {
@@ -451,6 +401,7 @@
 							border: 2px solid #9599c5;
 							box-sizing: content-box;
 						}
+
 						@keyframes twinkle {
 							from {
 								border-color: #9599c5;
@@ -507,16 +458,19 @@
 						}
 					}
 				}
+
 				#filePickerId {
 					input {
 						opacity: 0;
 						height: 100%;
 						width: 100%;
 					}
+
 					label {
 						display: none !important;
 					}
 				}
+
 				.fs-nav-tools-box {
 					i {
 						font-size: 22px;
@@ -524,11 +478,13 @@
 						color: white;
 
 					}
+
 					&:hover {
 						i {
 							color: #cad0ec;
 						}
-					 }
+					}
+
 					&:active,
 					&:focus {
 						i {

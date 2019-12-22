@@ -1,9 +1,8 @@
 <template>
 	<div class="address-label" v-click-outside="() => editing = false" @click="editStatusChange(true)">
-		<div class="label-box" :class="{'disabled': disabled}" v-show="!editing" title="点击修改">{{val || placeholder}}<i class=""></i></div>
+		<div class="label-box" :class="{'disabled': disabled}" v-show="!editing" title="点击修改">{{value || '根目录'}}<i class=""></i></div>
 		<div class="edit-box" v-show="editing && !disabled">
-			<input ref='labelInputRef' v-model.lazy="val" @keyup.enter="onSubmit" autofocus>
-			</input>
+			<input ref='labelInputRef' v-model.lazy="value" @keyup.enter="onSubmit" autofocus/>
 		</div>
 	</div>
 </template>
@@ -16,10 +15,6 @@ export default {
 			type: String,
 			default: '默认label'
 		},
-		placeholder: {
-			type: String,
-			default: '——'
-		},
 		disabled: {
 			type: Boolean,
 			default: false
@@ -27,12 +22,8 @@ export default {
 	},
 	data () {
 		return {
-			editing: false,
-			val: ''
+			editing: false
 		};
-	},
-	mounted () {
-		this.val = this.value;
 	},
 	methods: {
 		editStatusChange (status) {
@@ -40,13 +31,13 @@ export default {
 			this.editing = status;
 			if (status) {
 				setTimeout(() => {
-					this.$refs.labelInputRef.focus();
+					this.$refs['labelInputRef'].focus();
 				}, 300);
 			}
 		},
 		onSubmit () {
 			this.editStatusChange(false);
-			this.$emit('addressSearch', this.val);
+			this.$emit('addressSearch', this.value);
 		}
 	}
 };
@@ -70,6 +61,7 @@ export default {
 		padding-right: 15px;
 		font-size: 12px;
 		cursor: text;
+		user-select: auto;
 
 		&.disabled {
 			cursor: not-allowed;
@@ -77,11 +69,14 @@ export default {
 	}
 	.edit-box {
 		height: 100%;
+		width: 100%;
 		display: flex;
 		align-items: center;
 		justify-content: flex-end;
+		user-select: auto;
 
 		input {
+			width: 100%;
 			border: unset;
 			background: transparent;
 			font-size: 12px;
