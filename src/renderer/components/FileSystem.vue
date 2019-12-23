@@ -71,7 +71,8 @@
 					class="fs-shortcut-item"
 					v-for="(item, index) in shortcuts"
 					:key="index + '-shortcuts'"
-					@click="item.unfold = !item.unfold"
+					@click="current.shortcutSelected = index"
+					:class="current.shortcutSelected === index ? 'active':''"
 				>
 					<file-icon :name="getIcon(item.type)"/>
 					<span class="fs-shortcut-item-name ">{{ item.name }}</span>
@@ -84,6 +85,11 @@
 							   :style="'margin: 0 ' + cssConfig.fsiMargin" :key="index" :file="item"
 							   v-for="(item, index) in current.dirs"/>
 			</div>
+		</div>
+		<div class="fs-status-bar">
+			<div class="fs-status-text">20个项目</div>
+			<div class="fs-status-text">选中1个文件</div>
+			<div class="fs-status-text">20M</div>
 		</div>
 	</div>
 </template>
@@ -125,26 +131,22 @@
 					{
 						name: '文档',
 						path: '',
-						type: 'doc',
-						unfold: false
+						type: 'doc'
 					},
 					{
 						name: '图片',
 						path: '',
-						type: 'img',
-						unfold: false
+						type: 'img'
 					},
 					{
 						name: '音乐',
 						path: '',
-						type: 'music',
-						unfold: false
+						type: 'music'
 					},
 					{
 						name: '视频',
 						path: '',
-						type: 'video',
-						unfold: false
+						type: 'video'
 					}
 				]
 			};
@@ -162,13 +164,14 @@
 		},
 		methods: {
 			initUploader() {
+				let self = this;
 				const uploader = WebUploader.create({
 					auto: true,
 					chunked: true,
 					pick: '#filePickerId',
 					dnd: '#ffbId',
 					method: 'POST',
-					server: 'http://localhost:9999/resource/file/upload'
+					server: 'http://localhost:9000/resource/file/upload'
 				});
 				uploader.on('fileQueued', function (file) {
 					// 选中文件时要做的事情，比如在页面中显示选中的文件并添加到文件列表，获取文件的大小，文件类型等
@@ -181,6 +184,7 @@
 				});
 				uploader.on('uploadSuccess', function (file, response) {
 					console.log('传输成功' + file.id);
+					self.getDir();
 				});
 				uploader.on('uploadError', function (file) {
 					console.log('传输内容：' + file);
@@ -208,6 +212,7 @@
 					this.current.path = this.current.path.substring(0, this.current.path.lastIndexOf('/'));
 					this.getDir();
 				} else if (this.current.path !== '') {
+					this.pathStore.last = this.current.path;
 					this.current.path = '';
 					this.getDir();
 				}
@@ -231,7 +236,7 @@
 			resize() {
 				if (this.$refs && this.$refs['ffbRef']) {
 					let newVal = this.$refs['ffbRef'].clientWidth;
-					let margin = (newVal % 100) / ((newVal / 100) * 2);
+					let margin = (newVal % 120) / ((newVal / 120) * 2);
 					this.cssConfig.fsiMargin = margin + 'px';
 				}
 			},
@@ -496,7 +501,7 @@
 		}
 
 		.fs-content-box {
-			height: calc(100% - 36px - 46px);
+			height: calc(100% - 36px - 46px - 24px);
 			background: white;
 
 			.fs-shortcut-box {
@@ -505,6 +510,7 @@
 				width: 200px;
 				overflow: auto;
 				border-right: 1px solid #e8eff1;
+				border-left: 1px solid #e8eff1;
 
 				.fs-shortcut-item {
 					display: flex;
@@ -520,17 +526,30 @@
 						padding-left: 12px;
 					}
 
-					&:hover {
+					&:hover, &.active {
 						background: #e5f3ff;
 					}
 				}
 			}
 
 			.fs-file-box {
-				float: right;
+				float: left;
 				overflow: auto;
 				height: 100%;
 				width: calc(100% - 200px);
+			}
+		}
+
+		.fs-status-bar {
+			background: white;
+			height: 24px;
+			border-top: 1px solid #e8eff1;
+			display: flex;
+			align-items: center;
+			.fs-status-text {
+				font-size: 12px;
+				padding: 0 14px;
+				color: #5b6682;
 			}
 		}
 	}

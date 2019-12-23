@@ -81,7 +81,7 @@ export default {
 
 <style lang="scss">
 .file-shortcut-item {
-	width: 100px;
+	width: 120px;
 	float: left;
 	padding: 10px;
 	text-align: center;
@@ -91,12 +91,16 @@ export default {
 			background: aliceblue;
 		}
 	}
+	&.active .fsi-file-box {
+		outline: 1px solid #9bbdf9;
+	}
 	.fsi-file-icon {
 		font-size: 60px;
 	}
 	.fsi-file-name {
 		height: 20px;
 		font-size: 12px;
+		padding: 0 5px;
 		letter-spacing: .4px;
 		overflow: hidden;
 		text-overflow: ellipsis;
