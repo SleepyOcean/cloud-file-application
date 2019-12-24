@@ -82,7 +82,7 @@
 				<file-shortcut @click.native="current.fileSelected = index"
 							   @dblclick.native="dirExplore(item)"
 							   :class="current.fileSelected === index ? 'active':''"
-							   :style="'margin: 0 ' + cssConfig.fsiMargin" :key="index" :file="item"
+							   :style="'margin: 0 ' + cssConfig.fsiMargin" :key="index" :file="item" :urlSuffix="server + '/file/get?dir=' + current.path"
 							   v-for="(item, index) in current.dirs"/>
 			</div>
 		</div>
@@ -90,6 +90,9 @@
 			<div class="fs-status-text">20个项目</div>
 			<div class="fs-status-text">选中1个文件</div>
 			<div class="fs-status-text">20M</div>
+		</div>
+		<div class="fs-audio-box" v-if="current.music">
+			<audio ref="player" :src="current.music" type="audio/mpeg" autoplay="autoplay" preload="auto" @ended="current.music=''" controls></audio>
 		</div>
 	</div>
 </template>
@@ -113,11 +116,13 @@
 		},
 		data() {
 			return {
+				server: 'http://localhost:9000/resource',
 				cssConfig: {
 					fsiMargin: ''
 				},
 				title: '云文件管理系统',
 				current: {
+					music: '',
 					path: '',
 					dirs: [],
 					shortcutSelected: -1,
@@ -166,12 +171,15 @@
 			initUploader() {
 				let self = this;
 				const uploader = WebUploader.create({
+					resize: false,
 					auto: true,
 					chunked: true,
+					chunkRetry: 2,
+					threads: 6,
 					pick: '#filePickerId',
 					dnd: '#ffbId',
 					method: 'POST',
-					server: 'http://localhost:9000/resource/file/upload'
+					server: self.server + '/file/upload'
 				});
 				uploader.on('fileQueued', function (file) {
 					// 选中文件时要做的事情，比如在页面中显示选中的文件并添加到文件列表，获取文件的大小，文件类型等
@@ -192,7 +200,7 @@
 				});
 			},
 			getDir() {
-				getDir({dir: this.current.path}).then(data => {
+				getDir(this.current.path).then(data => {
 					this.current.dirs = data.dir;
 				});
 			},
@@ -204,6 +212,8 @@
 						this.current.path += `${item.name}`;
 					}
 					this.getDir();
+				} else if (item.type === '.wav') {
+					this.current.music = this.server + '/file/get?dir=' + this.current.path + item.name;
 				}
 			},
 			back() {
@@ -550,6 +560,17 @@
 				font-size: 12px;
 				padding: 0 14px;
 				color: #5b6682;
+			}
+		}
+
+		.fs-audio-box {
+			position: absolute;
+			bottom: 30px;
+			right: 20px;
+			width: 300px;
+			height: 32px;
+			audio {
+				width: 100%;
 			}
 		}
 	}

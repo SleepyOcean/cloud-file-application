@@ -2,7 +2,10 @@
 	<div class="file-shortcut-item" :title="file.name">
 		<div class="fsi-file-box">
 			<div class="fsi-file-icon">
-				<file-icon :name="getIcon(file.type)"></file-icon>
+				<file-icon :name="getIcon(file.type)" v-if="file.category !== 'image' || !urlSuffix"></file-icon>
+				<div class="fsi-image-box" v-if="file.category === 'image' && urlSuffix">
+					<img :src="getImage()"></img>
+				</div>
 			</div>
 			<div class="fsi-file-name">
 				{{ file.name }}
@@ -27,6 +30,10 @@ export default {
 					type: '.html'
 				};
 			}
+		},
+		urlSuffix: {
+			type: String,
+			default: ''
 		}
 	},
 	methods: {
@@ -34,7 +41,7 @@ export default {
 			switch (type) {
 			case 'music':
 			case '.mp3':
-			case '.wmv':
+			case '.wav':
 			case '.flac':
 				return 'icon-file_music';
 			case 'doc':
@@ -74,6 +81,9 @@ export default {
 			default:
 				return 'icon-file';
 			}
+		},
+		getImage () {
+			return this.urlSuffix + encodeURIComponent(this.file.name) + '&ratio=0.2';
 		}
 	}
 };
@@ -82,6 +92,7 @@ export default {
 <style lang="scss">
 .file-shortcut-item {
 	width: 120px;
+	height: 120px;
 	float: left;
 	padding: 10px;
 	text-align: center;
@@ -94,8 +105,23 @@ export default {
 	&.active .fsi-file-box {
 		outline: 1px solid #9bbdf9;
 	}
+	.fsi-file-box {
+		height: 100%;
+	}
 	.fsi-file-icon {
+		height: calc(100% - 20px);
 		font-size: 60px;
+		.fsi-image-box {
+			height: 100%;
+			width: 100%;
+			display: flex;
+			padding: 5px;
+			img {
+				width: 100%;
+				max-height: 100%;
+				object-fit: contain;
+			}
+		}
 	}
 	.fsi-file-name {
 		height: 20px;
