@@ -82,7 +82,8 @@
 				<file-shortcut @click.native="current.fileSelected = index"
 							   @dblclick.native="dirExplore(item)"
 							   :class="current.fileSelected === index ? 'active':''"
-							   :style="'margin: 0 ' + cssConfig.fsiMargin" :key="index" :file="item" :urlSuffix="server + '/file/get?dir=' + current.path"
+							   :style="'margin: 0 ' + cssConfig.fsiMargin" :key="index" :file="item"
+							   :urlSuffix="server + '/file/get?dir=' + current.path"
 							   v-for="(item, index) in current.dirs"/>
 			</div>
 		</div>
@@ -91,8 +92,29 @@
 			<div class="fs-status-text">选中1个文件</div>
 			<div class="fs-status-text">20M</div>
 		</div>
-		<div class="fs-audio-box" v-if="current.music">
-			<audio ref="player" :src="current.music" type="audio/mpeg" autoplay="autoplay" preload="auto" @ended="current.music=''" controls></audio>
+		<div class="fs-plugins-box">
+			<div class="fs-audio-box" v-if="current.music">
+				<audio ref="player" :src="current.music" type="audio/mpeg" autoplay="autoplay" preload="auto"
+					   @ended="current.music=''" controls></audio>
+			</div>
+			<div class="fs-transfer-progress-box" v-if="transfer.showing">
+				<div class="fs-tpb-info">
+					<div class="fs-tpb-i-name" :title="transfer.fileName">{{transfer.fileName}}</div>
+					<div class="fs-tpb-i-speed">5M/s · 剩余3 s</div>
+				</div>
+				<div class="fs-tpb-status" v-if="transfer.result === 0">
+					<div class="fs-tpb-s-progress">
+						<div class="fs-tpb-s-p-current" :style="'width:' +  transfer.progress"></div>
+					</div>
+					{{transfer.progress}}
+					<i class=" iosfont icon-ios-close close center-box"/>
+				</div>
+				<div class="fs-tpb-result" v-if="transfer.result != 0">
+					<i class=" iosfont icon-ios-checkmark-circle success center-box" v-if="transfer.result > 0"></i>
+					<i class=" iosfont icon-ios-close-circle error center-box" v-if="transfer.result < 0"></i>
+					{{transfer.result > 0 ? '传输成功' : '传输出错'}}
+				</div>
+			</div>
 		</div>
 	</div>
 </template>
@@ -101,7 +123,7 @@
 	import AddressLabel from './components/AddressLabel';
 	import FileIcon from './components/FileIcon';
 	import FileShortcut from './components/FileShortcut';
-	import {getDir} from '../service/fileService';
+	import {getDir, checkExist, merge} from '../service/fileService';
 	import '../assets/icon/online/filefont.js';
 	import '../assets/icon/ios/iconfont.css';
 	import WebUploader from 'webuploader';
@@ -119,6 +141,14 @@
 				server: 'http://localhost:9000/resource',
 				cssConfig: {
 					fsiMargin: ''
+				},
+				// 文件传输信息
+				transfer: {
+					showing: false,
+					progress: '0',
+					result: 0,
+					fileName: '',
+					chunked: 0
 				},
 				title: '云文件管理系统',
 				current: {
@@ -174,6 +204,7 @@
 					resize: false,
 					auto: true,
 					chunked: true,
+					chunkSize: 5242880,
 					chunkRetry: 2,
 					threads: 6,
 					pick: '#filePickerId',
@@ -181,20 +212,48 @@
 					method: 'POST',
 					server: self.server + '/file/upload'
 				});
+				uploader.on('uploadStart', function (file) {
+					checkExist(file.name).then(exist => {
+						if(exist) {
+							uploader.skipFile(file);
+							self.transfer.result = 1;
+							self.transfer.progress = '0';
+							setTimeout(() => {
+								self.transfer.showing = false;
+							}, 3000);
+						}
+					});
+				});
+				uploader.on('uploadBeforeSend', function (file) {
+					self.transfer.chunked++;
+				});
 				uploader.on('fileQueued', function (file) {
+					self.transfer.result = 0;
+					self.transfer.showing = true;
+					self.transfer.fileName = file.name;
 					// 选中文件时要做的事情，比如在页面中显示选中的文件并添加到文件列表，获取文件的大小，文件类型等
 					console.log('文件的后缀' + file.ext); // 获取文件的后缀
 					console.log('文件的大小' + file.size); // 获取文件的大小
 					console.log('文件的名称' + file.name);
 				});
 				uploader.on('uploadProgress', function (file, percentage) {
+					self.transfer.progress = percentage * 100 + '%';
 					console.log('传输进度：' + percentage * 100 + '%');
 				});
 				uploader.on('uploadSuccess', function (file, response) {
+					if(self.transfer.chunked > 1){
+						merge(file.name);
+					}
+					self.transfer.result = 1;
+					self.transfer.progress = '0';
+					setTimeout(() => {
+						self.transfer.showing = false;
+					}, 3000);
 					console.log('传输成功' + file.id);
 					self.getDir();
 				});
 				uploader.on('uploadError', function (file) {
+					self.transfer.result = -1;
 					console.log('传输内容：' + file);
 					console.log('upload error' + file.id);
 				});
@@ -206,7 +265,7 @@
 			},
 			dirExplore(item) {
 				if (item.type === 'dir') {
-					if(this.current.path.indexOf('/') > -1 || this.current.path !== ''){
+					if (this.current.path.indexOf('/') > -1 || this.current.path !== '') {
 						this.current.path += `/${item.name}`;
 					} else {
 						this.current.path += `${item.name}`;
@@ -556,6 +615,7 @@
 			border-top: 1px solid #e8eff1;
 			display: flex;
 			align-items: center;
+
 			.fs-status-text {
 				font-size: 12px;
 				padding: 0 14px;
@@ -563,15 +623,111 @@
 			}
 		}
 
-		.fs-audio-box {
+		.fs-plugins-box {
 			position: absolute;
 			bottom: 30px;
-			right: 20px;
-			width: 300px;
-			height: 32px;
-			audio {
-				width: 100%;
+			right: 10px;
+			display: flex;
+			align-items: flex-end;
+			flex-direction: column;
+
+			.fs-audio-box {
+				width: 200px;
+				height: 32px;
+
+				audio {
+					width: 100%;
+				}
+			}
+
+			.fs-transfer-progress-box {
+				width: 400px;
+				height: 54px;
+				margin-top: 10px;
+				border-radius: 10px;
+				border: 1px solid #e9eced;
+				box-shadow: 0 0 5px 2px #e9eced;
+				padding: 0 10px;
+				display: flex;
+				align-items: center;
+				flex-direction: row;
+				justify-content: space-between;
+
+				.fs-tpb-info, .fs-tpb-status, .fs-tpb-result {
+					height: 100%;
+					display: flex;
+					align-items: center;
+					font-size: 14px;
+				}
+
+				.fs-tpb-info {
+					width: 200px;
+					display: flex;
+					justify-content: center;
+					flex-direction: column;
+
+					.fs-tpb-i-name, .fs-tpb-i-speed {
+						width: 100%;
+					}
+
+					.fs-tpb-i-name {
+						font-size: 14px;
+						font-weight: bold;
+						overflow: hidden;
+						text-overflow:ellipsis;
+						white-space: nowrap;
+					}
+
+					.fs-tpb-i-speed {
+						font-size: 12px;
+						color: #8a8c8d;
+					}
+				}
+
+				.fs-tpb-status {
+					justify-content: flex-end;
+
+					.fs-tpb-s-progress {
+						width: 120px;
+						height: 4px;
+						background: #c3cde2;
+						border-radius: 4px;
+						margin: 0 5px;
+
+						.fs-tpb-s-p-current {
+							height: 100%;
+							background: #412c72;
+							border-radius: 4px;
+							transition: width .4s linear;
+						}
+					}
+
+					i {
+						margin-left: 5px;
+					}
+				}
+
+				.fs-tpb-result {
+					width: 120px;
+					font-size: 18px;
+					font-weight: bold;
+					justify-content: center;
+
+					i {
+						font-size: 22px;
+						margin-right: 5px;
+
+						&.success {
+							color: limegreen;
+						}
+
+						&.error {
+							color: darkred;
+						}
+					}
+				}
 			}
 		}
+
 	}
 </style>
