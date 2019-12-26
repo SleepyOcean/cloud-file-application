@@ -116,7 +116,9 @@
 				</div>
 			</div>
 		</div>
-		<div class="fs-photo-view">
+		<div class="fs-photo-view" v-if="window.photo">
+			<i class="iosfont icon-ios-close" @click="window.photo = false"></i>
+			<img :src="getImage(current.dirs[current.fileSelected].name)" style="max-width: 100%;max-height: 100%;">
 		</div>
 	</div>
 </template>
@@ -203,6 +205,11 @@
 				})();
 			};
 		},
+		watch: {
+			'current.fileSelected': function () {
+				this.$nextTick(this.resize);
+			}
+		},
 		methods: {
 			initUploader() {
 				let self = this;
@@ -279,6 +286,9 @@
 					this.current.dirs = data.dir;
 					this.current.urlSuffix = this.server + '/file/get?dir=' + this.current.path + '/';
 				});
+			},
+			getImage (name) {
+				return this.current.urlSuffix + encodeURIComponent(name);
 			},
 			dirExplore(item) {
 				if (item.type === 'dir') {
@@ -747,6 +757,26 @@
 				}
 			}
 		}
-
+		.fs-photo-view {
+			position: absolute;
+			top: 0;
+			height: 100%;
+			width: 100%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background: #000c;
+			i {
+				position: absolute;
+				right: 10px;
+				top: 10px;
+				font-size: 32px;
+				font-weight: bold;
+				color: white;
+				&:hover {
+					color: #215f9e;
+				}
+			}
+		}
 	}
 </style>
