@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 let Config = {
-	AJAX_TIMEOUT: 3000,
+	AJAX_TIMEOUT: 30000,
 	REQUEST_BASE_URL: 'http://localhost:9000'
 };
 

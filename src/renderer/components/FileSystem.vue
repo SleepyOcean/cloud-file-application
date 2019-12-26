@@ -78,19 +78,19 @@
 					<span class="fs-shortcut-item-name ">{{ item.name }}</span>
 				</div>
 			</div>
-			<div class="fs-file-box" ref="ffbRef" id="ffbId">
+			<div class="fs-file-box" ref="ffbRef" id="ffbId" v-click-outside="() => current.fileSelected = -1">
 				<file-shortcut @click.native="current.fileSelected = index"
 							   @dblclick.native="dirExplore(item)"
 							   :class="current.fileSelected === index ? 'active':''"
 							   :style="'margin: 0 ' + cssConfig.fsiMargin" :key="index" :file="item"
-							   :urlSuffix="server + '/file/get?dir=' + current.path"
+							   :urlSuffix="current.urlSuffix"
 							   v-for="(item, index) in current.dirs"/>
 			</div>
 		</div>
 		<div class="fs-status-bar">
-			<div class="fs-status-text">20个项目</div>
-			<div class="fs-status-text">选中1个文件</div>
-			<div class="fs-status-text">20M</div>
+			<div class="fs-status-text">{{current.dirs.length}} 个项目</div>
+			<div class="fs-status-text" v-if="current.fileSelected > -1">选中1个项目</div>
+			<div class="fs-status-text" v-if="current.fileSelected > -1 && current.dirs[current.fileSelected].type != 'dir'">{{current.dirs[current.fileSelected].size}}</div>
 		</div>
 		<div class="fs-plugins-box">
 			<div class="fs-audio-box" v-if="current.music">
@@ -115,6 +115,8 @@
 					{{transfer.result > 0 ? '传输成功' : '传输出错'}}
 				</div>
 			</div>
+		</div>
+		<div class="fs-photo-view">
 		</div>
 	</div>
 </template>
@@ -142,6 +144,9 @@
 				cssConfig: {
 					fsiMargin: ''
 				},
+				window: {
+					photo: false
+				},
 				// 文件传输信息
 				transfer: {
 					showing: false,
@@ -154,6 +159,7 @@
 				current: {
 					music: '',
 					path: '',
+					urlSuffix: '',
 					dirs: [],
 					shortcutSelected: -1,
 					fileSelected: -1
@@ -200,6 +206,11 @@
 		methods: {
 			initUploader() {
 				let self = this;
+				let hiddenMessageBox = () => {
+					setTimeout(() => {
+						self.transfer.showing = false;
+					}, 3000);
+				};
 				const uploader = WebUploader.create({
 					resize: false,
 					auto: true,
@@ -218,9 +229,7 @@
 							uploader.skipFile(file);
 							self.transfer.result = 1;
 							self.transfer.progress = '0';
-							setTimeout(() => {
-								self.transfer.showing = false;
-							}, 3000);
+							hiddenMessageBox();
 						}
 					});
 				});
@@ -237,20 +246,27 @@
 					console.log('文件的名称' + file.name);
 				});
 				uploader.on('uploadProgress', function (file, percentage) {
-					self.transfer.progress = percentage * 100 + '%';
+					self.transfer.progress = (percentage * 100 + '').substring(0, 4) + '%';
 					console.log('传输进度：' + percentage * 100 + '%');
 				});
 				uploader.on('uploadSuccess', function (file, response) {
+					let success = () => {
+						self.transfer.result = 1;
+						self.transfer.progress = '0';
+						hiddenMessageBox();
+						self.getDir();
+					};
 					if(self.transfer.chunked > 1){
-						merge(file.name);
+						merge(file.name).then(data => {
+							if(data === 'success') {
+								success();
+							} else {
+								self.transfer.result = -1;
+							}
+						});
+					} else {
+						success();
 					}
-					self.transfer.result = 1;
-					self.transfer.progress = '0';
-					setTimeout(() => {
-						self.transfer.showing = false;
-					}, 3000);
-					console.log('传输成功' + file.id);
-					self.getDir();
 				});
 				uploader.on('uploadError', function (file) {
 					self.transfer.result = -1;
@@ -261,6 +277,7 @@
 			getDir() {
 				getDir(this.current.path).then(data => {
 					this.current.dirs = data.dir;
+					this.current.urlSuffix = this.server + '/file/get?dir=' + this.current.path + '/';
 				});
 			},
 			dirExplore(item) {
@@ -273,6 +290,8 @@
 					this.getDir();
 				} else if (item.type === '.wav') {
 					this.current.music = this.server + '/file/get?dir=' + this.current.path + item.name;
+				} else if (item.category === 'image') {
+					this.window.photo = true;
 				}
 			},
 			back() {
