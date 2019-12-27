@@ -33,8 +33,9 @@
 					<div class="fs-nav-address-bar" :class="{'editing': getAddressEditStatus()}">
 						<div class="fs-nav-address-option">
 							<i
-								class="iosfont icon-ios-desktop"
-								title="返回主目录"
+								class="iosfont icon-ios-cloudy"
+								title="设置云地址"
+								@click="window.input = true"
 							/>
 						</div>
 						<div class="fs-nav-address">
@@ -49,12 +50,6 @@
 								@click="refresh"
 							/>
 						</div>
-						<div class="fs-nav-address-option">
-							<i
-								class="iosfont icon-ios-arrow-down"
-								title="上一个位置"
-							/>
-						</div>
 					</div>
 				</div>
 				<div class="fs-nav-option fs-nav-tools-box">
@@ -66,7 +61,7 @@
 			</div>
 		</div>
 		<div class="fs-content-box">
-			<div class="fs-shortcut-box">
+			<div class="fs-shortcut-box" v-if="false">
 				<div
 					class="fs-shortcut-item"
 					v-for="(item, index) in shortcuts"
@@ -90,7 +85,7 @@
 		<div class="fs-status-bar">
 			<div class="fs-status-text">{{current.dirs.length}} 个项目</div>
 			<div class="fs-status-text" v-if="current.fileSelected > -1">选中1个项目</div>
-			<div class="fs-status-text" v-if="current.fileSelected > -1 && current.dirs[current.fileSelected].type != 'dir'">{{current.dirs[current.fileSelected].size}}</div>
+			<div class="fs-status-text" v-if="current.fileSelected > -1 && current.dirs[current.fileSelected] && current.dirs[current.fileSelected].type != 'dir'">{{current.dirs[current.fileSelected].size}}</div>
 		</div>
 		<div class="fs-plugins-box">
 			<div class="fs-audio-box" v-if="current.music">
@@ -106,8 +101,8 @@
 					<div class="fs-tpb-s-progress">
 						<div class="fs-tpb-s-p-current" :style="'width:' +  transfer.progress"></div>
 					</div>
-					{{transfer.progress}}
-					<i class=" iosfont icon-ios-close close center-box"/>
+					<span>{{transfer.progress}}</span>
+					<i class=" iosfont icon-ios-close close center-box" @click="transfer.cancelFile()"/>
 				</div>
 				<div class="fs-tpb-result" v-if="transfer.result != 0">
 					<i class=" iosfont icon-ios-checkmark-circle success center-box" v-if="transfer.result > 0"></i>
@@ -116,9 +111,32 @@
 				</div>
 			</div>
 		</div>
-		<div class="fs-photo-view" v-if="window.photo">
+		<div class="fs-photo-view" v-if="window.photo" @click.stop="1">
 			<i class="iosfont icon-ios-close" @click="window.photo = false"></i>
 			<img :src="getImage(current.dirs[current.fileSelected].name)" style="max-width: 100%;max-height: 100%;">
+		</div>
+		<div class="fs-message-box" v-if="window.message">
+			<div class="fs-mb-template-1">
+				<div class="fs-mb-t1-title"><i class="iosfont icon-ios-hand" style="font-size: 40px;padding-right: 10px;color: yellowgreen;display: inline;"></i>且慢！！！</div>
+				<div class="fs-mb-t1-content">文件已存在，确认要覆盖之前的文件吗？</div>
+				<div class="fs-mb-t1-options">
+					<div class="fs-mb-t1-option btn-positive" @click="transfer.uploadFile()">确认</div>
+					<div class="fs-mb-t1-option btn-negative" @click="transfer.skipFile()">取消</div>
+				</div>
+			</div>
+		</div>
+		<div class="fs-input-box" v-if="window.input">
+			<div class="fs-mb-template-1">
+				<div class="fs-mb-t1-title">
+					<i class="iosfont icon-ios-cloud" style="font-size: 28px;padding-right: 10px;color: #3a658a;display: inline;"></i>
+					配置你的私有云
+					<input class="fs-mb-t1-input" ref='inputRef' v-model.lazy="form.server" @keyup.enter="submitServerUrl" autofocus/>
+				</div>
+				<div class="fs-mb-t1-options">
+					<div class="fs-mb-t1-option btn-positive" @click="submitServerUrl">确认</div>
+					<div class="fs-mb-t1-option btn-negative" @click="window.input = false">取消</div>
+				</div>
+			</div>
 		</div>
 	</div>
 </template>
@@ -131,6 +149,7 @@
 	import '../assets/icon/online/filefont.js';
 	import '../assets/icon/ios/iconfont.css';
 	import WebUploader from 'webuploader';
+	import util from '../util/common';
 
 	const ipc = require('electron').ipcRenderer;
 	export default {
@@ -147,15 +166,26 @@
 					fsiMargin: ''
 				},
 				window: {
-					photo: false
+					photo: false,
+					message: false,
+					input: false
+				},
+				form: {
+					server: ''
 				},
 				// 文件传输信息
 				transfer: {
+					uploader: {},
+					uploadFile: {},
+					skipFile: {},
+					cancelFile: {},
 					showing: false,
 					progress: '0',
 					result: 0,
 					fileName: '',
-					chunked: 0
+					chunked: 0,
+					timeCountDown: 3,
+					override: false
 				},
 				title: '云文件管理系统',
 				current: {
@@ -196,7 +226,7 @@
 		},
 		mounted() {
 			let self = this;
-			self.resize();
+			self.$nextTick(self.resize);
 			self.initUploader();
 			self.getDir();
 			window.onresize = () => {
@@ -204,6 +234,10 @@
 					self.resize();
 				})();
 			};
+
+			// this.transfer.showing = true;
+			// this.transfer.progress = '94.2%';
+			// this.transfer.fileName = '阿斯利康的飞机啊手动阀卢卡斯';
 		},
 		watch: {
 			'current.fileSelected': function () {
@@ -218,9 +252,9 @@
 						self.transfer.showing = false;
 					}, 3000);
 				};
-				const uploader = WebUploader.create({
+				let options = {
 					resize: false,
-					auto: true,
+					auto: false,
 					chunked: true,
 					chunkSize: 5242880,
 					chunkRetry: 2,
@@ -229,39 +263,59 @@
 					dnd: '#ffbId',
 					method: 'POST',
 					server: self.server + '/file/upload'
+				};
+				self.transfer.uploader = util.noneWatch(WebUploader.create(options));
+				self.transfer.uploader.on('uploadStart', function (file) {
 				});
-				uploader.on('uploadStart', function (file) {
-					checkExist(file.name).then(exist => {
-						if(exist) {
-							uploader.skipFile(file);
-							self.transfer.result = 1;
-							self.transfer.progress = '0';
-							hiddenMessageBox();
-						}
-					});
-				});
-				uploader.on('uploadBeforeSend', function (file) {
+				self.transfer.uploader.on('uploadBeforeSend', function (file) {
 					self.transfer.chunked++;
 				});
-				uploader.on('fileQueued', function (file) {
-					self.transfer.result = 0;
-					self.transfer.showing = true;
-					self.transfer.fileName = file.name;
+				self.transfer.uploader.on('fileQueued', async function (file) {
+					let exist = await checkExist(file.name);
+					if(exist) {
+						self.window.message = true;
+						self.transfer.skipFile = () => {
+							self.transfer.uploader.skipFile(file);
+							self.transfer.uploader.reset();
+							self.window.message = false;
+						};
+						self.transfer.uploadFile = () => {
+							self.transfer.uploader.upload();
+							self.transfer.result = 0;
+							self.transfer.showing = true;
+							self.transfer.override = false;
+							self.transfer.fileName = file.name;
+							self.window.message = false;
+						};
+					} else {
+						self.transfer.uploader.upload();
+						self.transfer.override = false;
+						self.transfer.result = 0;
+						self.transfer.showing = true;
+						self.transfer.fileName = file.name;
+					}
+					self.transfer.cancelFile = () => {
+						self.transfer.uploader.cancelFile(file);
+						self.transfer.uploader.reset();
+						self.transfer.progress = '0';
+						self.transfer.showing = false;
+					};
 					// 选中文件时要做的事情，比如在页面中显示选中的文件并添加到文件列表，获取文件的大小，文件类型等
 					console.log('文件的后缀' + file.ext); // 获取文件的后缀
 					console.log('文件的大小' + file.size); // 获取文件的大小
 					console.log('文件的名称' + file.name);
 				});
-				uploader.on('uploadProgress', function (file, percentage) {
+				self.transfer.uploader.on('uploadProgress', function (file, percentage) {
 					self.transfer.progress = (percentage * 100 + '').substring(0, 4) + '%';
 					console.log('传输进度：' + percentage * 100 + '%');
 				});
-				uploader.on('uploadSuccess', function (file, response) {
+				self.transfer.uploader.on('uploadSuccess', function (file, response) {
 					let success = () => {
 						self.transfer.result = 1;
 						self.transfer.progress = '0';
 						hiddenMessageBox();
 						self.getDir();
+						self.transfer.uploader.reset();
 					};
 					if(self.transfer.chunked > 1){
 						merge(file.name).then(data => {
@@ -275,11 +329,16 @@
 						success();
 					}
 				});
-				uploader.on('uploadError', function (file) {
+				self.transfer.uploader.on('uploadError', function (file) {
 					self.transfer.result = -1;
 					console.log('传输内容：' + file);
 					console.log('upload error' + file.id);
 				});
+			},
+			submitServerUrl () {
+				this.server = this.form.server;
+				this.window.input = false;
+				this.getDir();
 			},
 			getDir() {
 				getDir(this.current.path).then(data => {
@@ -375,7 +434,6 @@
 	.file-system {
 		user-select: none;
 		overflow: hidden;
-
 		i {
 			display: flex;
 			align-items: center;
@@ -383,7 +441,6 @@
 			border-radius: 50%;
 			transition: all 0.1s ease-in-out;
 		}
-
 		.fs-header-box {
 			height: calc(36px + 46px);
 
@@ -548,7 +605,7 @@
 							color: #d6c5c5;
 							height: 100%;
 							letter-spacing: 1px;
-							width: calc(100% - 40px - 80px);
+							width: calc(100% - 40px - 40px);
 							display: flex;
 							align-items: center;
 							font-size: 14px;
@@ -597,7 +654,6 @@
 				}
 			}
 		}
-
 		.fs-content-box {
 			height: calc(100% - 36px - 46px - 24px);
 			background: white;
@@ -633,11 +689,11 @@
 			.fs-file-box {
 				float: left;
 				overflow: auto;
-				height: 100%;
-				width: calc(100% - 200px);
+				max-height: 100%;
+				width: 100%;
+				/*width: calc(100% - 200px);*/
 			}
 		}
-
 		.fs-status-bar {
 			background: white;
 			height: 24px;
@@ -651,7 +707,6 @@
 				color: #5b6682;
 			}
 		}
-
 		.fs-plugins-box {
 			position: absolute;
 			bottom: 30px;
@@ -671,16 +726,18 @@
 
 			.fs-transfer-progress-box {
 				width: 400px;
-				height: 54px;
+				height: 60px;
 				margin-top: 10px;
 				border-radius: 10px;
 				border: 1px solid #e9eced;
 				box-shadow: 0 0 5px 2px #e9eced;
+				background: white;
 				padding: 0 10px;
 				display: flex;
 				align-items: center;
 				flex-direction: row;
 				justify-content: space-between;
+				cursor: default;
 
 				.fs-tpb-info, .fs-tpb-status, .fs-tpb-result {
 					height: 100%;
@@ -690,7 +747,7 @@
 				}
 
 				.fs-tpb-info {
-					width: 200px;
+					width: 160px;
 					display: flex;
 					justify-content: center;
 					flex-direction: column;
@@ -705,6 +762,7 @@
 						overflow: hidden;
 						text-overflow:ellipsis;
 						white-space: nowrap;
+						margin-bottom: 4px;
 					}
 
 					.fs-tpb-i-speed {
@@ -715,7 +773,10 @@
 
 				.fs-tpb-status {
 					justify-content: flex-end;
-
+					span {
+						width: 45px;
+						padding-left: 5px;
+					}
 					.fs-tpb-s-progress {
 						width: 120px;
 						height: 4px;
@@ -733,6 +794,11 @@
 
 					i {
 						margin-left: 5px;
+						font-size: 30px;
+						cursor: pointer;
+						&:hover {
+							color: #215f9e;
+						}
 					}
 				}
 
@@ -775,6 +841,87 @@
 				color: white;
 				&:hover {
 					color: #215f9e;
+				}
+			}
+		}
+		.fs-message-box, .fs-input-box {
+			position: absolute;
+			top: 0;
+			height: 100%;
+			width: 100%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			.fs-mb-template-1 {
+				width: 360px;
+				background: white;
+				box-shadow: 0 0 18px 1px #b7b6b6;
+				border-radius: 4px;
+				padding: 10px 20px;
+				cursor: default;
+				.fs-mb-t1-title {
+					display: inline-block;
+					width: 100%;
+					height: 40px;
+					line-height: 40px;
+					font-size: 16px;
+					font-weight: bold;
+					user-select: none;
+					margin-bottom: 10px;
+				}
+				.fs-mb-t1-content {
+					height: calc(100% - 40px - 40px);
+					min-height: 30px;
+					display: flex;
+					align-items: center;
+					justify-content: flex-start;
+					font-size: 14px;
+				}
+				.fs-mb-t1-options {
+					height: 40px;
+					display: flex;
+					align-items: center;
+					justify-content: flex-end;
+					.fs-mb-t1-option {
+						height: 32px;
+						font-size: 15px;
+						display: flex;
+						align-items: center;
+						justify-content: center;
+						white-space: nowrap;
+						cursor: pointer;
+						user-select: none;
+						background-image: none;
+						border-radius: 4px;
+						margin: 0 10px;
+						&.btn-positive {
+							color: #3a658a;
+							&:hover {
+								color: #023471;
+							}
+						}
+						&.btn-negative {
+							color: #757577;
+							&:hover {
+								color: #c3bee6;
+							}
+						}
+					}
+				}
+			}
+		}
+		.fs-input-box {
+			.fs-mb-template-1 {
+				width: 500px;
+				.fs-mb-t1-title {
+					display: flex;
+					align-items: center;
+					margin-bottom: 0;
+					margin-top: 5px;
+					.fs-mb-t1-input {
+						margin-left: 20px;
+						height: 60%;
+					}
 				}
 			}
 		}
