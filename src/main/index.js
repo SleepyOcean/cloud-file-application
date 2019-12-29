@@ -51,6 +51,7 @@ function createWindow () {
     mainWindow = null
   })
 }
+app.commandLine.appendSwitch("--disable-http-cache");
 
 app.on('ready', createWindow)
 

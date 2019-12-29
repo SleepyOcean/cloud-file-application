@@ -2,7 +2,8 @@
 	<div class="file-system full">
 		<div class="fs-header-box">
 			<div class="fs-title-bar v-center-box">
-				<div class="fs-logo"></div>
+				<div class="fs-logo">
+				</div>
 				<div class="fs-title v-center-box" style="-webkit-app-region: drag">{{ title }}</div>
 				<div class="fs-frame-options v-center-box">
 					<i
@@ -10,7 +11,7 @@
 						@click="minusWindow"
 					/>
 					<i
-						class="fs-frame-options-item iosfont icon-ios-qr-scanner max center-box"
+						class="fs-frame-options-item iosfont icon-ios-resize max center-box"
 						@click="maxWindow"
 					/>
 					<i
@@ -52,15 +53,15 @@
 						</div>
 					</div>
 				</div>
-				<div class="fs-nav-option fs-nav-tools-box">
-					<i class="iosfont icon-ios-cog" title="设置"/>
-				</div>
 				<div class="fs-nav-option fs-nav-tools-box" id="filePickerId">
 					<i class="iosfont icon-ios-cloud-upload" title="上传文件"/>
 				</div>
+				<div class="fs-nav-option fs-nav-tools-box" @click="window.about = true">
+					<i class="iosfont icon-ios-help-circle-outl" title="关于"/>
+				</div>
 			</div>
 		</div>
-		<div class="fs-content-box">
+		<div class="fs-content-box" id="fcbId">
 			<div class="fs-shortcut-box" v-if="false">
 				<div
 					class="fs-shortcut-item"
@@ -138,6 +139,26 @@
 				</div>
 			</div>
 		</div>
+		<div class="fs-about-box" v-if="window.about" @click.stop="window.about && (window.about = false)">
+			<div class="fs-about-box-content fs-mb-template-1">
+				<div class="fs-abc-head">
+					<div class="fs-abc-logo"></div>
+					{{title}}</div>
+				<div class="fs-abc-content">
+					<div class="fs-abc-c-row bold">版本 v.1.0.0</div>
+					<div class="fs-abc-c-row">构建时间 2019-12-29</div>
+					<div class="fs-abc-c-row"></div>
+					<div class="fs-abc-c-row" style="align-items: baseline;">
+						<span style="font-weight: bold;font-size: 12px;padding-right: 10px;">created by</span>
+						<a style="font-size: 16px;" href="https://github.com/SleepyOcean">sleepy ocean</a>
+					</div>
+					<div class="fs-abc-c-row higher">
+						<div class="fs-abc-link github"></div>
+						<div class="fs-abc-link csdn"></div>
+					</div>
+				</div>
+			</div>
+		</div>
 	</div>
 </template>
 
@@ -168,7 +189,8 @@
 				window: {
 					photo: false,
 					message: false,
-					input: false
+					input: false,
+					about: true
 				},
 				form: {
 					server: ''
@@ -260,7 +282,7 @@
 					chunkRetry: 2,
 					threads: 6,
 					pick: '#filePickerId',
-					dnd: '#ffbId',
+					dnd: '#fcbId',
 					method: 'POST',
 					server: self.server + '/file/upload'
 				};
@@ -452,8 +474,8 @@
 				.fs-logo {
 					height: 30px;
 					width: 30px;
-					background-size: 30px;
-					background-image: url("../assets/img/whale.svg");
+					background-size: 20px;
+					background-image: url("../assets/img/cloud-file-logo.svg");
 					background-position: center;
 					background-repeat: no-repeat;
 				}
@@ -461,11 +483,12 @@
 				.fs-title {
 					height: 100%;
 					width: 100%;
-					justify-content: center;
+					justify-content: flex-start;
 					color: white;
 					font-size: 12px;
 					font-weight: lighter;
 					letter-spacing: 2px;
+					padding-left: 5px;
 				}
 
 				.fs-frame-options {
@@ -844,7 +867,7 @@
 				}
 			}
 		}
-		.fs-message-box, .fs-input-box {
+		.fs-message-box, .fs-input-box, .fs-about-box {
 			position: absolute;
 			top: 0;
 			height: 100%;
@@ -921,6 +944,64 @@
 					.fs-mb-t1-input {
 						margin-left: 20px;
 						height: 60%;
+					}
+				}
+			}
+		}
+		.fs-about-box {
+			.fs-about-box-content {
+				width: 400px;
+				height: 220px;
+				padding: 0;
+				.fs-abc-head{
+					height: 60px;
+					padding-bottom: 10px;
+					color: white;
+					font-weight: bold;
+					letter-spacing: 2px;
+					padding-left: 10px;
+					display: flex;
+					align-items: flex-end;
+					background: linear-gradient(45deg, #1d204e, #5f5f5f);
+					.fs-abc-logo {
+						height: 30px;
+						width: 30px;
+						background-size: 30px;
+						margin-right: 10px;
+						background-image: url("../assets/img/cloud-file-logo.svg");
+						background-position: center;
+						background-repeat: no-repeat;
+					}
+				}
+				.fs-abc-content {
+					height: calc(100% - 60px);
+					padding: 10px 20px;
+					.fs-abc-c-row {
+						height: 24px;
+						font-size: 14px;
+						display: flex;
+						align-items: center;
+						&.bold {
+							font-weight: bold;
+						}
+						&.higher {
+							height: 40px;
+						}
+						.fs-abc-link {
+							height: 30px;
+							width: 30px;
+							background-size: 20px;
+							margin-right: 10px;
+							cursor: pointer;
+							background-position: center;
+							background-repeat: no-repeat;
+							&.github {
+								background-image: url("../assets/img/gitHub.svg");
+							}
+							&.csdn {
+								background-image: url("../assets/img/csdn.svg");
+							}
+						}
 					}
 				}
 			}
