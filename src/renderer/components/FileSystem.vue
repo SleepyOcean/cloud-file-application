@@ -74,7 +74,7 @@
 					<span class="fs-shortcut-item-name ">{{ item.name }}</span>
 				</div>
 			</div>
-			<div class="fs-file-box" ref="ffbRef" id="ffbId" v-click-outside="() => current.fileSelected = -1">
+			<div class="fs-file-box" ref="ffbRef" id="ffbId" v-click-outside="() => current.fileSelected = -1" webkitdirectory>
 				<file-shortcut @click.native="current.fileSelected = index"
 							   @dblclick.native="dirExplore(item)"
 							   :class="current.fileSelected === index ? 'active':''"
@@ -190,7 +190,7 @@
 					photo: false,
 					message: false,
 					input: false,
-					about: true
+					about: false
 				},
 				form: {
 					server: ''
@@ -289,7 +289,7 @@
 				self.transfer.uploader = util.noneWatch(WebUploader.create(options));
 				self.transfer.uploader.on('uploadStart', function (file) {
 				});
-				self.transfer.uploader.on('uploadBeforeSend', function (file) {
+				self.transfer.uploader.on('uploadBeforeSend', function (object, data, headers) {
 					self.transfer.chunked++;
 				});
 				self.transfer.uploader.on('fileQueued', async function (file) {
@@ -335,6 +335,7 @@
 					let success = () => {
 						self.transfer.result = 1;
 						self.transfer.progress = '0';
+						self.transfer.chunked = 0;
 						hiddenMessageBox();
 						self.getDir();
 						self.transfer.uploader.reset();
@@ -353,6 +354,7 @@
 				});
 				self.transfer.uploader.on('uploadError', function (file) {
 					self.transfer.result = -1;
+					self.transfer.chunked = 0;
 					console.log('传输内容：' + file);
 					console.log('upload error' + file.id);
 				});
@@ -580,8 +582,8 @@
 
 						&.editing {
 							background: transparent;
-							animation: twinkle 1.2s infinite ease-in;
-							border: 2px solid #9599c5;
+							animation: twinkle 1.5s infinite ease-in;
+							border: 2px solid #ecebdd;
 							box-sizing: content-box;
 						}
 

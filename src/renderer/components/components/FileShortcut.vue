@@ -79,7 +79,7 @@ export default {
 			case '.7z':
 				return 'icon-file_zip';
 			default:
-				return 'icon-file';
+				return 'icon-file_cloud';
 			}
 		},
 		getImage () {

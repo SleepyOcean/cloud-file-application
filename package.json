@@ -23,7 +23,7 @@
     "postinstall": "npm run lint:fix"
   },
   "build": {
-    "productName": "file-system",
+    "productName": "File System",
     "appId": "com.sleepy",
     "directories": {
       "output": "dist/application"
