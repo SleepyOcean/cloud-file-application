@@ -1,6 +1,6 @@
 'use strict'
 
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, Menu, shell, ipcMain } from 'electron'
 const ipc = ipcMain
 
 // 登录窗口最小化
@@ -17,6 +17,19 @@ ipc.on('window-max', function () {
 })
 ipc.on('window-close', function () {
   mainWindow.close()
+})
+
+const fileContextMenuTemplate = [
+	{
+		label: '复制链接地址',
+		role: 'copy',
+	}
+];
+const fileContextMenu = Menu.buildFromTemplate(fileContextMenuTemplate);
+
+// 监听右键事件
+ipc.on('fileContextMenu', () => {
+	fileContextMenu.popup(BrowserWindow.getFocusedWindow());
 })
 /**
  * Set `__static` path to static files in production

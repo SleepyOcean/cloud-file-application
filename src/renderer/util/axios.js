@@ -1,8 +1,7 @@
 import axios from 'axios';
 
 let Config = {
-	AJAX_TIMEOUT: 30000,
-	REQUEST_BASE_URL: 'http://localhost:9000'
+	AJAX_TIMEOUT: 30000
 };
 
 // 开发环境
@@ -47,7 +46,7 @@ axios.ajax = function (url, method, params, form = false, customize = {}, respon
 	return new Promise((resolve, reject) => {
 		let config = null;
 		if(url && (url.toLowerCase().indexOf('http://') !== 0 && url.toLowerCase().indexOf('https://') !== 0)){
-			url = Config.REQUEST_BASE_URL + url;
+			url = localStorage.getItem('fileServer') + url;
 		}
 		if (form) {
 			config = {

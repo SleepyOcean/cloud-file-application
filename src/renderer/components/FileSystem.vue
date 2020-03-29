@@ -77,6 +77,7 @@
 			<div class="fs-file-box" ref="ffbRef" id="ffbId" v-click-outside="() => current.fileSelected = -1" webkitdirectory>
 				<file-shortcut @click.native="current.fileSelected = index"
 							   @dblclick.native="dirExplore(item)"
+							   @contextmenu.native="fileContextmenuClick"
 							   :class="current.fileSelected === index ? 'active':''"
 							   :style="'margin: 0 ' + cssConfig.fsiMargin" :key="index" :file="item"
 							   :urlSuffix="current.urlSuffix"
@@ -182,7 +183,6 @@
 		},
 		data() {
 			return {
-				server: 'http://localhost:9000/resource',
 				cssConfig: {
 					fsiMargin: ''
 				},
@@ -256,17 +256,21 @@
 					self.resize();
 				})();
 			};
-
-			// this.transfer.showing = true;
-			// this.transfer.progress = '94.2%';
-			// this.transfer.fileName = '阿斯利康的飞机啊手动阀卢卡斯';
 		},
 		watch: {
 			'current.fileSelected': function () {
 				this.$nextTick(this.resize);
 			}
 		},
+		computed: {
+			server: function () {
+				return localStorage.getItem('fileServer') ? localStorage.getItem('fileServer') : 'http://localhost:9000';
+			}
+		},
 		methods: {
+			fileContextmenuClick () {
+				ipc.send('fileContextMenu');
+			},
 			initUploader() {
 				let self = this;
 				let hiddenMessageBox = () => {
@@ -284,7 +288,7 @@
 					pick: '#filePickerId',
 					dnd: '#fcbId',
 					method: 'POST',
-					server: self.server + '/file/upload'
+					server: self.server + '/resource/file/upload'
 				};
 				self.transfer.uploader = util.noneWatch(WebUploader.create(options));
 				self.transfer.uploader.on('uploadStart', function (file) {
@@ -360,14 +364,14 @@
 				});
 			},
 			submitServerUrl () {
-				this.server = this.form.server;
+				localStorage.setItem('fileServer', this.form.server);
 				this.window.input = false;
 				this.getDir();
 			},
 			getDir() {
 				getDir(this.current.path).then(data => {
 					this.current.dirs = data.dir;
-					this.current.urlSuffix = this.server + '/file/get?dir=' + this.current.path + '/';
+					this.current.urlSuffix = this.server + '/resource/file/get?dir=' + this.current.path + '/';
 				});
 			},
 			getImage (name) {
@@ -381,8 +385,8 @@
 						this.current.path += `${item.name}`;
 					}
 					this.getDir();
-				} else if (item.type === '.wav') {
-					this.current.music = this.server + '/file/get?dir=' + this.current.path + item.name;
+				} else if (item.type === '.wav' || item.type === '.mp3') {
+					this.current.music = this.server + '/resource/file/get?dir=' + this.current.path + item.name;
 				} else if (item.category === 'image') {
 					this.window.photo = true;
 				}
